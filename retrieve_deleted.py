@@ -1,6 +1,7 @@
 import mechanize
 import sys
 import json
+import re
 from bs4 import BeautifulSoup
 
 from selenium import webdriver
@@ -11,12 +12,20 @@ chrome_options = Options()
 #chrome_options.add_argument("--headless")
 br = webdriver.Chrome(chrome_options=chrome_options, executable_path=r'./chromedriver.exe')
 br.get('https://www.youtube.com/playlist?list=FLfu72fp0-EvF0_PMq2bLgQA&disable_polymer=1')
-wait = ui.WebDriverWait(br,30)
-soup = BeautifulSoup(br.page_source, "html.parser")
+wait = ui.WebDriverWait(br,50)
+
 
 count = 0
 video_list = []
 
+for i in range(1, 10):
+	time.sleep(1)
+	button = wait.until(lambda br: br.find_element_by_xpath('//*[@id="pl-video-list"]/button')).click()
+	
+
+
+
+soup = BeautifulSoup(br.page_source, "html.parser")
 for tr in soup.findAll('tr'):
 	
 	if tr.has_attr('data-video-id'):
@@ -53,23 +62,44 @@ for video in video_list:
 	# Has snapshot; add to list
 	if json_data["archived_snapshots"]:
 		snapshots.append(json_data["archived_snapshots"]['closest']['url'])
+	
 	# Save ID for later google scraping
 	else:
 		remaining.append(video)
 
+
 print('\n'.join(snapshots))
-	
+
+# Scrape Wayback Machine for video titles using found video IDs
 for video in snapshots:
 	br.get(video)
-	snap = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+	title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
 	
-	# Go to earliest screenshot instead
-	while snap == "":
+	# Setting maximum tries if Wayback loops back (it's a glitchy website)
+	totalSnaps = br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').innerHTML
+	totalSnaps = re.findall("\d+", totalSnaps[0])
+	tries = 0
+
+	# Go to earliest snapshot instead if most recent is unavailable
+	while title == "" and tries < totalSnaps:
 		br.find_element_by_xpath('//*[@id="wm-ipp-inside"]/div[1]/table/tbody/tr[1]/td[2]/table/tbody/tr[2]/td[1]').click()
-		snap = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+		tries = tries + 1
 
-	print snap
+	print title
 
+
+for video in remaining:
+	url = 'https://www.youtube.com/watch?v=' + video + '&disable_polymer=1'
+	br.get(url)
+
+	# Get remains of title
+	title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
+	title = re.search('"(.*)..."', title).group(1)
+
+	# Search for mirror video with ID
+	title = title + " " + video
+	print title
 
 
 br.quit()
