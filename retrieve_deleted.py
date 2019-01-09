@@ -18,7 +18,7 @@ wait = ui.WebDriverWait(br,50)
 count = 0
 video_list = []
 
-for i in range(1, 10):
+for i in range(1, 5):
 	time.sleep(1)
 	button = wait.until(lambda br: br.find_element_by_xpath('//*[@id="pl-video-list"]/button')).click()
 	
@@ -73,20 +73,41 @@ print('\n'.join(snapshots))
 # Scrape Wayback Machine for video titles using found video IDs
 for video in snapshots:
 	br.get(video)
-	title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+	title = ''
+	try:
+		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+		continue
+	except:
+		pass
 	
 	# Setting maximum tries if Wayback loops back (it's a glitchy website)
-	totalSnaps = br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').innerHTML
-	totalSnaps = re.findall("\d+", totalSnaps[0])
+	x = br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text')
+	totalSnaps = re.findall('\d+', x[0])
+	totalSnaps = int(totalSnaps[0])
 	tries = 0
 
 	# Go to earliest snapshot instead if most recent is unavailable
 	while title == "" and tries < totalSnaps:
-		br.find_element_by_xpath('//*[@id="wm-ipp-inside"]/div[1]/table/tbody/tr[1]/td[2]/table/tbody/tr[2]/td[1]').click()
-		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+
+		# Get title 
+		try:
+			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+		except:
+			pass
+		
+		# check if there are more snapshots if current title is null
+		try:
+			br.find_element_by_xpath('//*[@id="wm-ipp-inside"]/div[1]/table/tbody/tr[1]/td[2]/table/tbody/tr[2]/td[1]').click()
+		except:
+			break
+
 		tries = tries + 1
 
-	print title
+	# Print current title for confirmation
+	if title:
+		print title
+	else:
+		remaining.append(video)
 
 
 for video in remaining:
