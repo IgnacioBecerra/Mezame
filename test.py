@@ -5,8 +5,21 @@ import time
 import re
 chrome_options = Options()  
 #chrome_options.add_argument("--headless")
+start_time = time.time()
 br = webdriver.Chrome(chrome_options=chrome_options, executable_path=r'./chromedriver.exe')
 
+def chunkErrorCheck():
+
+	while True:
+		try:
+			text = br.find_element_by_xpath('//*[@id="main-message"]/h1/span')
+
+			if text:
+				br.find_element_by_xpath('//*[@id="reload-button"]').click()
+		except:
+			break
+
+remaining = []
 with open('./links') as f:
     content = f.readlines()
 # you may also want to remove whitespace characters like `\n` at the end of each line
@@ -15,28 +28,36 @@ snapshots = [x.strip('\n') for x in content]
 # Scrape Wayback Machine for video titles using found video IDs
 for video in snapshots:
 	br.get(video)
+	chunkErrorCheck()
 	title = ''
 	
 	try:
 		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
-		print title
-		continue
+		
+		# Go to next video if title is found
+		if title != "":
+			print title
+			continue
 	except:
 		pass
 	
 	# Setting maximum tries if Wayback loops back (it's a glitchy website)
 	x = br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text')
-	totalSnaps = re.findall('\d+', x[0])
+	totalSnaps = re.findall('\d+', x)
 	totalSnaps = int(totalSnaps[0])
 	tries = 0
 
 	# Go to earliest snapshot instead if most recent is unavailable
 	while title == "" and tries < totalSnaps:
+		chunkErrorCheck()
 
 		# Get title 
 		try:
 			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
-			print title + " YUP"
+
+			if title != "":
+				print title
+				continue
 		except:
 			pass
 		
@@ -53,10 +74,13 @@ for video in snapshots:
 		print "appending..."
 		remaining.append(video)
 
+elapsed_time = time.time() - start_time
+print elapsed_time
 
 for video in remaining:
-	url = 'https://www.youtube.com/watch?v=' + video + '&disable_polymer=1'
+	url = video
 	br.get(url)
+	chunkErrorCheck()
 
 	# Get remains of title
 	title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
@@ -66,5 +90,5 @@ for video in remaining:
 	title = title + " " + video
 	print title
 
-
+elapsed_time = time.time() - start_time
 br.quit()
