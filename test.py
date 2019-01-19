@@ -4,9 +4,11 @@ import selenium.webdriver.support.ui as ui
 import time
 import re
 chrome_options = Options()  
-#chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless")
+
 start_time = time.time()
 br = webdriver.Chrome(chrome_options=chrome_options, executable_path=r'./chromedriver.exe')
+wait = ui.WebDriverWait(br,3)
 
 def chunkErrorCheck():
 
@@ -42,7 +44,7 @@ for video in snapshots:
 		pass
 	
 	# Setting maximum tries if Wayback loops back (it's a glitchy website)
-	x = br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text')
+	x = wait.until(lambda br: br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text'))
 	totalSnaps = re.findall('\d+', x)
 	totalSnaps = int(totalSnaps[0])
 	tries = 0
