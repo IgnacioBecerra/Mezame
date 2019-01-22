@@ -30,7 +30,7 @@ def chunkErrorCheck():
 
 
 
-count = 0
+count = 1
 video_list = []
 
 # Click next button to load more videos
@@ -48,7 +48,7 @@ for tr in soup.findAll('tr'):
 
 		# Add removed videos to list
 		if 'Private' in title or 'Deleted' in title:
-			print tr['data-title'] + ' - ' + tr['data-video-id']
+			print str(count) + " " + tr['data-title'] + ' - ' + tr['data-video-id']
 			video_list.append((count, tr['data-video-id']))
 	count = count + 1
 
@@ -67,7 +67,7 @@ for index, video in video_list:
 	
 	# Save ID for later google scraping
 	else:
-		print "No wayback" + str(index) + " " + video
+		print "No wayback " + str(index) + " " + video
 		unarchived.append((index, video))
 
 
@@ -130,12 +130,7 @@ print elapsed_time
 for i in unarchived:
 	print i[0], i[1]
 
-
-
 br.quit()
-
-
-
 
 for index, video in unarchived:
 	br.get(video)
