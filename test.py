@@ -4,7 +4,7 @@ import selenium.webdriver.support.ui as ui
 import time
 import re
 chrome_options = Options()  
-chrome_options.add_argument("--headless")
+#chrome_options.add_argument("--headless")
 
 start_time = time.time()
 br = webdriver.Chrome(chrome_options=chrome_options, executable_path=r'./chromedriver.exe')
@@ -21,65 +21,16 @@ def chunkErrorCheck():
 		except:
 			break
 
-remaining = []
-with open('./links') as f:
-    content = f.readlines()
-# you may also want to remove whitespace characters like `\n` at the end of each line
-snapshots = [x.strip('\n') for x in content] 
+unarchived = []
+with open('./notFound.txt') as f:
+    unarchived = [tuple(map(str, i.split(' '))) for i in f]
 
-# Scrape Wayback Machine for video titles using found video IDs
-for video in snapshots:
-	br.get(video)
-	chunkErrorCheck()
-	title = ''
-	
-	try:
-		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
-		
-		# Go to next video if title is found
-		if title != "":
-			print title
-			continue
-	except:
-		pass
-	
-	# Setting maximum tries if Wayback loops back (it's a glitchy website)
-	x = wait.until(lambda br: br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text'))
-	totalSnaps = re.findall('\d+', x)
-	totalSnaps = int(totalSnaps[0])
-	tries = 0
 
-	# Go to earliest snapshot instead if most recent is unavailable
-	while title == "" and tries < totalSnaps:
-		chunkErrorCheck()
+for i in unarchived:
+	print i[0], i[1]
 
-		# Get title 
-		try:
-			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
 
-			if title != "":
-				print title
-				continue
-		except:
-			pass
-		
-		# check if there are more snapshots if current title is null
-		try:
-			br.find_element_by_xpath('//*[@id="wm-ipp-inside"]/div[1]/table/tbody/tr[1]/td[2]/table/tbody/tr[2]/td[1]').click()
-		except:
-			break
-
-		tries = tries + 1
-
-	# Print current title for confirmation
-	if title == "":
-		print "appending..."
-		remaining.append(video)
-
-elapsed_time = time.time() - start_time
-print elapsed_time
-
-for video in remaining:
+for index, video in unarchived:
 	url = video
 	br.get(url)
 	chunkErrorCheck()

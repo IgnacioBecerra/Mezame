@@ -49,31 +49,33 @@ for tr in soup.findAll('tr'):
 		# Add removed videos to list
 		if 'Private' in title or 'Deleted' in title:
 			print tr['data-title'] + ' - ' + tr['data-video-id']
-			video_list.append(tr['data-video-id'])
+			video_list.append((count, tr['data-video-id']))
 	count = count + 1
 
 snapshots = []
-remaining = []
+unarchived = []
 
 # Check if Wayback Machine has video title saved
-for video in video_list:
+for index, video in video_list:
 	url = 'http://archive.org/wayback/available?url=https://www.youtube.com/watch?v=' + video
 	br.get(url)
 	json_data = json.loads(br.find_element_by_tag_name('pre').text)
 
-	# Has snapshot; add to list
+	# Has snapshot; add most recent to list
 	if json_data["archived_snapshots"]:
-		snapshots.append(json_data["archived_snapshots"]['closest']['url'])
+		snapshots.append((index, json_data["archived_snapshots"]['closest']['url']))
 	
 	# Save ID for later google scraping
 	else:
-		remaining.append(video)
+		print "No wayback" + str(index) + " " + video
+		unarchived.append((index, video))
 
 
-print('\n'.join(snapshots))
+for i in snapshots:
+	print i[0], i[1]
 
 # Scrape Wayback Machine for video titles using found video IDs
-for video in snapshots:
+for index, video in snapshots:
 	br.get(video)
 	chunkErrorCheck()
 	title = ''
@@ -104,6 +106,7 @@ for video in snapshots:
 
 			if title != "":
 				print title
+				video = title
 				continue
 		except:
 			pass
@@ -118,15 +121,24 @@ for video in snapshots:
 
 	# Print current title for confirmation
 	if title == "":
-		print "appending..."
-		remaining.append(video)
+		print "appending..." + str(index) + " " + video
+		unarchived.append((index,video))
 
 elapsed_time = time.time() - start_time
 print elapsed_time
 
-for video in remaining:
-	url = video
-	br.get(url)
+for i in unarchived:
+	print i[0], i[1]
+
+
+
+br.quit()
+
+
+
+
+for index, video in unarchived:
+	br.get(video)
 	chunkErrorCheck()
 
 	# Get remains of title
