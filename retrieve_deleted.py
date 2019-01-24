@@ -15,7 +15,7 @@ chrome_options = Options()
 start_time = time.time()
 br = webdriver.Chrome(chrome_options=chrome_options, executable_path=r'./chromedriver.exe')
 br.get('https://www.youtube.com/playlist?list=FLfu72fp0-EvF0_PMq2bLgQA&disable_polymer=1')
-wait = ui.WebDriverWait(br,3)
+wait = ui.WebDriverWait(br,100)
 
 def chunkErrorCheck():
 
@@ -25,6 +25,14 @@ def chunkErrorCheck():
 
 			if text:
 				br.find_element_by_xpath('//*[@id="reload-button"]').click()
+		except:
+			pass
+
+		try:
+			text = br.find_element_by_xpath('/html/head/title').get_attribute('innerhtml')
+			
+			if '502' in text:
+				br.refresh()
 		except:
 			break
 
@@ -91,7 +99,12 @@ for index, video in snapshots:
 		pass
 	
 	# Setting maximum tries if Wayback loops back (it's a glitchy website)
-	x = wait.until(lambda br: br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text'))
+	while True:
+		try:
+			x = wait.until(lambda br: br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text'))
+			break
+		except:
+			br.refresh()
 	totalSnaps = re.findall('\d+', x)
 	totalSnaps = int(totalSnaps[0])
 	tries = 0
@@ -105,7 +118,7 @@ for index, video in snapshots:
 			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
 
 			if title != "":
-				print title
+				print str(index) + " " + title
 				video = title
 				continue
 		except:
