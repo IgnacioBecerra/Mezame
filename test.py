@@ -7,6 +7,7 @@ chrome_options = Options()
 #chrome_options.add_argument("--headless")
 start_time = time.time()
 br = webdriver.Chrome(chrome_options=chrome_options, executable_path=r'./chromedriver.exe')
+wait = ui.WebDriverWait(br,100)
 
 def chunkErrorCheck():
 
@@ -17,79 +18,85 @@ def chunkErrorCheck():
 			if text:
 				br.find_element_by_xpath('//*[@id="reload-button"]').click()
 		except:
+			pass
+
+		try:
+			text = br.find_element_by_xpath('/html/head/title').get_attribute('innerhtml')
+
+			if '502' in text:
+				br.refresh()
+		except:
 			break
 
-remaining = []
-with open('./links') as f:
-    content = f.readlines()
-# you may also want to remove whitespace characters like `\n` at the end of each line
-snapshots = [x.strip('\n') for x in content] 
+search_list = []
+unarchived = []
+with open('./notFound.txt') as f:
+    unarchived = [tuple(map(str, i.replace('\n','').split(' '))) for i in f]
 
-# Scrape Wayback Machine for video titles using found video IDs
-for video in snapshots:
-	br.get(video)
-	chunkErrorCheck()
+for i in unarchived:
+	print i[0], i[1]
+
+
+for index, videoID in unarchived:
+
 	title = ''
-	
-	try:
-		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
-		
-		# Go to next video if title is found
-		if title != "":
-			print title
-			continue
-	except:
-		pass
-	
-	# Setting maximum tries if Wayback loops back (it's a glitchy website)
-	x = br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text')
-	totalSnaps = re.findall('\d+', x)
-	totalSnaps = int(totalSnaps[0])
-	tries = 0
 
-	# Go to earliest snapshot instead if most recent is unavailable
-	while title == "" and tries < totalSnaps:
+	# Access Wayback
+	if "youtube" in videoID:
+		url = videoID.partition("?v=")[2]
+		url = 'http://web.archive.org/web/*/https://www.youtube.com/watch?v=' + url
+		br.get(url)
+		title = ''
+		br.implicitly_wait(10)
+
+		while True:
+			print "looping"
+			
+			try:
+				br.find_element_by_xpath('//*[@id="wbMetaCaptureDates"]/span/a[1]').click()
+			except:
+				pass
+				
+			try:
+				br.find_element_by_xpath('//*[@id="wbMetaCaptureDates"]/a').click()
+			except:
+				break
+
+		print "Before chunk"
 		chunkErrorCheck()
+		print "After chunk"
+
+		br.implicitly_wait(10)
 
 		# Get title 
 		try:
 			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
 
-			if title != "":
-				print title
-				continue
+			if title != '':
+				print str(index) + " " + title
 		except:
-			pass
+			title = br.find_element_by_xpath('//*[@id="info"]/yt-formatted-string[1]').text
+			# ^ http://web.archive.org/web/20140803133656/https://www.youtube.com/watch?v=AfOML-DgMvA
+			print str(index) + " " + title
+
+	else:
+		br.get('https://www.youtube.com/watch?v=' + videoID + '&disable_polymer=1')
 		
-		# check if there are more snapshots if current title is null
 		try:
-			br.find_element_by_xpath('//*[@id="wm-ipp-inside"]/div[1]/table/tbody/tr[1]/td[2]/table/tbody/tr[2]/td[1]').click()
+			# Get remains of title
+			title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
+			title = re.search('"(.*)..."', title).group(1)
+
+			# Search for mirror videoID with ID
+			print title + " " + videoID
+		
 		except:
-			break
+			# No videoID title available, search
+			print videoID
 
-		tries = tries + 1
+	search_list.append((index, title, videoID))
 
-	# Print current title for confirmation
-	if title == "":
-		print "appending..."
-		remaining.append(video)
+for i in search_list:
+	print i[0], i[1], i[2]
 
-elapsed_time = time.time() - start_time
-print elapsed_time
-
-for video in remaining:
-	url = video
-	br.get(url)
-	chunkErrorCheck()
-
-	# Get remains of title
-	title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
-	title = re.search('"(.*)..."', title).group(1)
-
-	# Search for mirror video with ID
-	title = title + " " + video
-	print title
-
-elapsed_time = time.time() - start_time
-print elapsed_time
 br.quit()

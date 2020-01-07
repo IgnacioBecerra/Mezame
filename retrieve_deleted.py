@@ -30,7 +30,7 @@ def chunkErrorCheck():
 
 		try:
 			text = br.find_element_by_xpath('/html/head/title').get_attribute('innerhtml')
-			
+
 			if '502' in text:
 				br.refresh()
 		except:
@@ -40,6 +40,7 @@ def chunkErrorCheck():
 
 count = 1
 video_list = []
+video_titles = []
 
 # Click next button to load more videos
 for i in range(1, 5):
@@ -119,7 +120,7 @@ for index, video in snapshots:
 
 			if title != "":
 				print str(index) + " " + title
-				video = title
+				video_titles.append((index, title))
 				continue
 		except:
 			pass
@@ -146,16 +147,60 @@ for i in unarchived:
 br.quit()
 
 for index, video in unarchived:
-	br.get(video)
+
+	# Access Wayback
+	if "youtube" in video:
+		url = re.search('?v=(.*)', video).group(1)
+		url = 'http://web.archive.org/web/*/https://www.youtube.com/watch?v=' + url
+		br.get(url)
+		title = ''
+		wait.until(lambda br: br.find_element_by_xpath('//*[@id="wbMetaCaptureDates"]/span/a[1]')).click()
+
+		# Get title 
+		try:
+			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+
+			if title != '':
+				print str(index) + " " + title
+		except:
+			pass
+
+
+
+	
+	
+	else:
+		br.get('youtube.com/watch?v=' + video)
+		
+		# Get remains of title
+		title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
+		title = re.search('"(.*)..."', title).group(1)
+
+
+		# Search for mirror video with ID
+		title = title + " " + video
+		print title
+
+	'''
+		Scenarios:
+
+		No wayback
+		>Go to youtube page
+		>Get title
+		>search ID + title
+		>else ID
+
+		
+		Wayback
+		>Go to earliest
+		>Check for title
+		>If no title, search ID only
+		>else search ID + title
+	'''
+
 	chunkErrorCheck()
 
-	# Get remains of title
-	title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
-	title = re.search('"(.*)..."', title).group(1)
-
-	# Search for mirror video with ID
-	title = title + " " + video
-	print title
+	
 
 elapsed_time = time.time() - start_time
 br.quit()
