@@ -34,7 +34,7 @@ with open('./notFound.txt') as f:
     unarchived = [tuple(map(str, i.replace('\n','').split(' '))) for i in f]
 
 for i in unarchived:
-	print i[0], i[1]
+	print(i[0], i[1])
 
 
 for index, videoID in unarchived:
@@ -50,34 +50,46 @@ for index, videoID in unarchived:
 		br.implicitly_wait(10)
 
 		while True:
-			print "looping"
+			print("looping")
 			
 			try:
-				br.find_element_by_xpath('//*[@id="wbMetaCaptureDates"]/span/a[1]').click()
+				br.find_element_by_xpath('//*[@id="react-wayback-search"]/div[2]/span/a[1]').click()
 			except:
 				pass
 				
 			try:
-				br.find_element_by_xpath('//*[@id="wbMetaCaptureDates"]/a').click()
+				br.find_element_by_xpath('//*[@id="react-wayback-search"]/div[2]/a').click()
 			except:
 				break
 
-		print "Before chunk"
-		chunkErrorCheck()
-		print "After chunk"
+		print("Before chunk")
+		#chunkErrorCheck()
+		print("After chunk")
 
 		br.implicitly_wait(10)
 
 		# Get title 
 		try:
+			print("first try")
 			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
 
 			if title != '':
-				print str(index) + " " + title
-		except:
-			title = br.find_element_by_xpath('//*[@id="info"]/yt-formatted-string[1]').text
+				print(str(index) + " " + title)
+
+			print('second')
+			title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
 			# ^ http://web.archive.org/web/20140803133656/https://www.youtube.com/watch?v=AfOML-DgMvA
-			print str(index) + " " + title
+			print(str(index) + " " + title)
+			
+		except:
+
+
+			print("HERE")
+			title = br.find_elements_by_xpath("/html/head/title")[0].text
+
+			if title != '':
+				print(str(index) + " " + title)
+
 
 	else:
 		br.get('https://www.youtube.com/watch?v=' + videoID + '&disable_polymer=1')
@@ -88,15 +100,15 @@ for index, videoID in unarchived:
 			title = re.search('"(.*)..."', title).group(1)
 
 			# Search for mirror videoID with ID
-			print title + " " + videoID
+			print(title + " " + videoID)
 		
 		except:
 			# No videoID title available, search
-			print videoID
+			print(videoID)
 
 	search_list.append((index, title, videoID))
 
 for i in search_list:
-	print i[0], i[1], i[2]
+	print(i[0], i[1], i[2])
 
 br.quit()

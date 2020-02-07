@@ -41,6 +41,7 @@ def chunkErrorCheck():
 count = 1
 video_list = []
 video_titles = []
+private = []
 
 # Click next button to load more videos
 for i in range(1, 5):
@@ -55,9 +56,13 @@ for tr in soup.findAll('tr'):
 
 		title = tr['data-title']
 
+		if 'Private' in title:
+			print(str(count) + " " + tr['data-title'] + ' - ' + tr['data-video-id'])
+			private.append((count, tr['data-video-id']))
+
 		# Add removed videos to list
-		if 'Private' in title or 'Deleted' in title:
-			print str(count) + " " + tr['data-title'] + ' - ' + tr['data-video-id']
+		if'Deleted' in title:
+			print(str(count) + " " + tr['data-title'] + ' - ' + tr['data-video-id'])
 			video_list.append((count, tr['data-video-id']))
 	count = count + 1
 
@@ -72,77 +77,76 @@ for index, video in video_list:
 
 	# Has snapshot; add most recent to list
 	if json_data["archived_snapshots"]:
-		snapshots.append((index, json_data["archived_snapshots"]['closest']['url']))
+		newLink = "https://web.archive.org/web/*/https://www.youtube.com/watch?v=" + video
+		snapshots.append((index, newLink))
 	
 	# Save ID for later google scraping
 	else:
-		print "No wayback " + str(index) + " " + video
+		print("No wayback " + str(index) + " " + video)
 		unarchived.append((index, video))
 
 
 for i in snapshots:
-	print i[0], i[1]
+	print(i[0], i[1])
 
 # Scrape Wayback Machine for video titles using found video IDs
 for index, video in snapshots:
 	br.get(video)
-	chunkErrorCheck()
+	#chunkErrorCheck()
 	title = ''
 	
-	try:
-		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
-		
-		# Go to next video if title is found
-		if title != "":
-			print title
-			continue
-	except:
-		pass
-	
-	# Setting maximum tries if Wayback loops back (it's a glitchy website)
 	while True:
+		print("looping")
+		br.implicitly_wait(10)
+		
 		try:
-			x = wait.until(lambda br: br.find_element_by_xpath('//*[@id="wm-nav-captures"]/a').get_attribute('text'))
-			break
-		except:
-			br.refresh()
-	totalSnaps = re.findall('\d+', x)
-	totalSnaps = int(totalSnaps[0])
-	tries = 0
-
-	# Go to earliest snapshot instead if most recent is unavailable
-	while title == "" and tries < totalSnaps:
-		chunkErrorCheck()
-
-		# Get title 
-		try:
-			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
-
-			if title != "":
-				print str(index) + " " + title
-				video_titles.append((index, title))
-				continue
+			br.find_element_by_xpath('//*[@id="react-wayback-search"]/div[2]/span/a[1]').click()
 		except:
 			pass
-		
-		# check if there are more snapshots if current title is null
+			
 		try:
-			br.find_element_by_xpath('//*[@id="wm-ipp-inside"]/div[1]/table/tbody/tr[1]/td[2]/table/tbody/tr[2]/td[1]').click()
+			br.find_element_by_xpath('//*[@id="react-wayback-search"]/div[2]/a').click()
 		except:
 			break
 
-		tries = tries + 1
+	print("Before chunk")
+	#chunkErrorCheck()
+	print("After chunk")
+
+	br.implicitly_wait(10)
+
+	# Get title 
+	try:
+		print("first try")
+		title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
+
+		if title != '':
+			print(str(index) + " " + title)
+
+		print('second')
+		title = br.find_element_by_xpath('//*[@id="unavailable-message"]').text
+		# ^ http://web.archive.org/web/20140803133656/https://www.youtube.com/watch?v=AfOML-DgMvA
+		print(str(index) + " " + title)
+		
+	except:
+
+
+		print("HERE")
+		title = br.find_elements_by_xpath("/html/head/title")[0].text
+
+		if title != '':
+			print(str(index) + " " + title)
 
 	# Print current title for confirmation
 	if title == "":
-		print "appending..." + str(index) + " " + video
+		print("appending..." + str(index) + " " + video)
 		unarchived.append((index,video))
 
 elapsed_time = time.time() - start_time
-print elapsed_time
+print(elapsed_time)
 
 for i in unarchived:
-	print i[0], i[1]
+	print(i[0], i[1])
 
 br.quit()
 
@@ -161,7 +165,7 @@ for index, video in unarchived:
 			title = br.find_element_by_xpath("//meta[@name='title']").get_attribute('content')
 
 			if title != '':
-				print str(index) + " " + title
+				print(str(index) + " " + title)
 		except:
 			pass
 
@@ -179,7 +183,7 @@ for index, video in unarchived:
 
 		# Search for mirror video with ID
 		title = title + " " + video
-		print title
+		print(title)
 
 	'''
 		Scenarios:
